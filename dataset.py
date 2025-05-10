@@ -1,6 +1,7 @@
 import random
 from autograd import Variable
 
+
 class PolynomialDataset:
     def __init__(self, coefficients, num_samples=10000, noise_std=0.1, test_ratio=0.2):
         self.coefficients = [Variable(c) for c in coefficients]
@@ -8,7 +9,8 @@ class PolynomialDataset:
         self.noise_std = noise_std
 
         full_x = [Variable(random.uniform(-1, 1)) for _ in range(num_samples)]
-        full_y = [self._generate_polynomial(xi) + Variable(random.gauss(0, noise_std)) for xi in full_x]
+        full_y = [self._generate_polynomial(
+            xi) + Variable(random.gauss(0, noise_std)) for xi in full_x]
 
         split_idx = int(num_samples * (1 - test_ratio))
         self.train_x = full_x[:split_idx]
@@ -28,6 +30,7 @@ class PolynomialDataset:
 
     def get_test_set(self):
         return list(zip(self.test_x, self.test_y))
+
 
 def get_batches(dataset, batch_size, shuffle=True):
     indices = list(range(len(dataset)))
