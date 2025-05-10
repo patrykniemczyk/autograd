@@ -82,6 +82,15 @@ class Variable:
 		out._backward = _backward
 		return out
 
+	def relu(self):
+		out = Variable(max(0, self.data), prev=(self,))
+  
+		def _backward():
+			self.grad += out.grad * (1 if self.data > 0 else 0)
+  
+		out._backward = _backward
+		return out
+
 	def __neg__(self):
 		return self * -1
 
