@@ -11,6 +11,9 @@ class Neuron:
 	def __call__(self, activations):
 		return sum(w * a for w, a in zip(self.w, activations)) + self.b
 
+	def parameters(self):
+		return self.w + [self.b]
+
 class Linear:
 	
 	def __init__(self, input_size, output_size):
@@ -18,6 +21,9 @@ class Linear:
 		
 	def __call__(self, activations):
 		return [neuron(activations) for neuron in self.neurons]
+
+	def parameters(self):
+		return [param for neuron in self.neurons for param in neuron.parameters()]
 
 class ReLU:
 	
@@ -39,3 +45,6 @@ class MLP:
 		for layer in self.layers:
 			x = layer(x)
 		return x
+
+	def parameters(self):
+		return [param for layer in self.layers for param in layer.parameters()]
