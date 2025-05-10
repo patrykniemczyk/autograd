@@ -120,4 +120,4 @@ class Variable:
         return Variable(other) / self
 
     def __repr__(self):
-        return f"Variable(data={self.data}, grad={self.grad})"
+        return f"Variable(data={self.data:.2f}, grad={self.grad:.2f})"
