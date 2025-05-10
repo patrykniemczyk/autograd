@@ -9,18 +9,6 @@ class Variable:
         self._backward = lambda: None
         self.prev = prev
 
-    def zero_grad(self):
-        visited = set()
-
-        def zero(v):
-            if v not in visited:
-                visited.add(v)
-                v.grad = 0.0
-                for p in v.prev:
-                    zero(p)
-
-        zero(self)
-
     def backward(self):
         order = []
         visited = set()
