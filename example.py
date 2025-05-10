@@ -1,14 +1,41 @@
 from autograd import Variable
 
-# Example usage:
+# Example 1: Testing addition
+x = Variable(2.0)
+y = Variable(3.0)
+z = x + y
+z.grad = 1.0  # Assigning the gradient to the output variable
 
-a = Variable(2)
-b = Variable(3)
+# Backpropagate the gradients
+z._backward()
+print(f"Gradients after addition: x.grad = {x.grad}, y.grad = {y.grad}")  # Expected: 1.0, 1.0
 
-print(a ** b)    # Variable(data=8)
-print(a ** 2)    # Variable(data=4)
-print(2 ** a)    # Variable(data=4)
+# Example 2: Testing multiplication
+x = Variable(2.0)
+y = Variable(3.0)
+z = x * y
+z.grad = 1.0  # Assigning the gradient to the output variable
 
-print(a / b)     # Variable(data=0.6666666666666666)
-print(a / 2)     # Variable(data=1.0)
-print(2 / a)     # Variable(data=1.0)
+# Backpropagate the gradients
+z._backward()
+print(f"Gradients after multiplication: x.grad = {x.grad}, y.grad = {y.grad}")  # Expected: 3.0, 2.0
+
+# Example 3: Testing exponentiation
+x = Variable(2.0)
+z = x ** 2
+z.grad = 1.0  # Assigning the gradient to the output variable
+
+# Backpropagate the gradient
+z._backward()
+print(f"Gradient after exponentiation: x.grad = {x.grad}")  # Expected: 4.0 (2 * 2)
+
+# Example 4: Testing exponentiation with variable exponent
+x = Variable(2.0)
+y = Variable(3.0)
+z = x ** y
+z.grad = 1.0  # Assigning the gradient to the output variable
+
+# Backpropagate the gradients
+z._backward()
+print(f"Gradients after exponentiation with variable exponent: x.grad = {x.grad}, y.grad = {y.grad}")  
+# Expected: x.grad = 3.0 * 2^2 = 12.0, y.grad = 2^3 * log(2) ≈ 5.5451

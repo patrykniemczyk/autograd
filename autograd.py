@@ -1,31 +1,56 @@
+import math
+
 class Variable:
-    
-	def __init__(self, data):
+	
+	def __init__(self, data, prev=()):
 		self.data = data
+		self.grad = 0.0
+		self._backward = lambda: None
+		self.prev = prev
 
 	def __add__(self, other):
 		
 		if isinstance(other, Variable):
-			out = Variable(self.data + other.data)
+			out = Variable(self.data + other.data, prev=(self, other))
 		else:
-			out = Variable(self.data + other)
+			out = Variable(self.data + other, prev=(self,))
+   
+		def _backward():
+			self.grad += out.grad
+			if isinstance(other, Variable):
+				other.grad += out.grad
 
+		out._backward = _backward
 		return out
 
 	def __mul__(self, other):
 		if isinstance(other, Variable):
-			out = Variable(self.data * other.data)
+			out = Variable(self.data * other.data, prev=(self, other))
 		else:
-			out = Variable(self.data * other)
-
+			out = Variable(self.data * other, prev=(self,))
+   
+		def _backward():
+			self.grad += out.grad * other.data
+			if isinstance(other, Variable):
+				other.grad += out.grad * self.data
+	
+		out._backward = _backward
 		return out
 
 	def __pow__(self, other):
 		if isinstance(other, Variable):
-			out = Variable(self.data ** other.data)
+			out = Variable(self.data ** other.data, prev=(self, other))
 		else:
-			out = Variable(self.data ** other)
+			out = Variable(self.data ** other, prev=(self,))
+	
+		def _backward():
+			if isinstance(other, Variable):
+				self.grad += out.grad * other.data * self.data ** (other.data - 1)
+				other.grad += out.grad * self.data ** other.data * math.log(self.data)
+			else:
+				self.grad += out.grad * other * self.data ** (other - 1)
 
+		out._backward = _backward
 		return out
 
 	def __neg__(self):
@@ -53,4 +78,4 @@ class Variable:
 		return Variable(other) / self
 
 	def __repr__(self):
-		return f"Variable(data={self.data})"
+		return f"Variable(data={self.data}, grad={self.grad})"
