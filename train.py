@@ -14,6 +14,7 @@ model = MLP(1, [16, 16], 1)
 optimizer = AdamW(model.parameters(), lr=0.01)
 
 epochs = 100
+batch_size = 64
 # Training loop
 for epoch in range(epochs+1):
     # Zero gradients
@@ -21,10 +22,11 @@ for epoch in range(epochs+1):
 
     # Forward pass and compute loss
     loss = Variable(0.0)
-    for x, y in dataset:
+    batch_x, batch_y = dataset.get_batch(batch_size)
+    for x, y in zip(batch_x, batch_y):
         output = model(x)
         loss += sum((o - t) ** 2 for o, t in zip(output, y))
-    loss /= len(dataset)
+    loss /= batch_size
 
     # Backward pass
     loss.backward()
@@ -33,4 +35,4 @@ for epoch in range(epochs+1):
     optimizer.step()
 
     if epoch % 10 == 0:
-        print(f"Epoch {epoch}, loss: {loss.data:.2f}")
+        print(f"Epoch {epoch}, loss: {loss.data:.6f}")

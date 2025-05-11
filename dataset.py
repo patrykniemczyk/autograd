@@ -32,4 +32,4 @@ class PolynomialDataset:
 
     def get_batch(self, batch_size):
         indices = random.sample(range(len(self)), batch_size)
-        return [self[i] for i in indices], [self[i] for i in indices]
+        return [self.train_x[i] for i in indices], [self.train_y[i] for i in indices]
