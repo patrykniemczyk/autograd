@@ -1,6 +1,6 @@
 import math
 import random
-from autograd import Variable
+from Variable import Variable
 
 
 class Neuron:

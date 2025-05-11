@@ -1,8 +1,8 @@
 # Import necessary components
-from autograd import Variable
-from neural_net import MLP
-from adamw import AdamW
-from dataset import PolynomialDataset
+from Variable import Variable
+from MLP import MLP
+from AdamW import AdamW
+from Dataset import PolynomialDataset
 
 # Create a polynomial dataset (3x^2 + 2x - 1)
 dataset = PolynomialDataset([3, 2, -1], noise_std=0.01)

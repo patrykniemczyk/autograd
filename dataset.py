@@ -1,5 +1,5 @@
 import random
-from autograd import Variable
+from Variable import Variable
 
 
 class PolynomialDataset:
@@ -29,3 +29,7 @@ class PolynomialDataset:
 
     def __getitem__(self, idx):
         return self.train_x[idx], self.train_y[idx]
+
+    def get_batch(self, batch_size):
+        indices = random.sample(range(len(self)), batch_size)
+        return [self[i] for i in indices], [self[i] for i in indices]
