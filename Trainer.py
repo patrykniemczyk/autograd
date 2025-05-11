@@ -1,6 +1,7 @@
 import argparse
 import time
 from typing import List, Dict
+import matplotlib.pyplot as plt
 
 from Variable import Variable
 from MLP import MLP
@@ -126,7 +127,7 @@ class Trainer:
         self,
         dataset,
         epochs: int = 100,
-        validate_every: int = 1,
+        validate_every: int = 10,
         verbose: bool = True
     ) -> List[Dict[str, float]]:
         """
@@ -172,11 +173,11 @@ class Trainer:
 def main():
     """Main function to run training."""
     parser = argparse.ArgumentParser(description="Train an MLP model")
-    parser.add_argument("--hidden-sizes", type=int, nargs="+", default=[4, 4],
+    parser.add_argument("--hidden-sizes", type=int, nargs="+", default=[16, 16],
                         help="Sizes of hidden layers")
-    parser.add_argument("--epochs", type=int, default=10,
+    parser.add_argument("--epochs", type=int, default=100,
                         help="Number of training epochs")
-    parser.add_argument("--batch-size", type=int, default=32,
+    parser.add_argument("--batch-size", type=int, default=64,
                         help="Batch size for training")
     parser.add_argument("--lr", type=float, default=0.01,
                         help="Learning rate")
@@ -184,7 +185,7 @@ def main():
                         help="Weight decay factor")
     parser.add_argument("--noise", type=float, default=0.01,
                         help="Noise level for dataset")
-    parser.add_argument("--polynomial-coeffs", type=float, nargs="+", default=[3, 1, -1],
+    parser.add_argument("--polynomial-coeffs", type=float, nargs="+", default=[10, -3, -2, 1],
                         help="Coefficients of the polynomial, from highest to lowest power")
 
     args = parser.parse_args()
@@ -229,6 +230,61 @@ def main():
     # Final evaluation
     final_loss = trainer.evaluate(dataset)
     print(f"Final evaluation loss: {final_loss:.6f}")
+
+    # Visualize results
+    visualize_predictions(model, dataset)
+
+
+def visualize_predictions(model, dataset):
+    """
+    Plot test data and model predictions.
+
+    Args:
+        model: Trained model
+        dataset: Dataset with test data
+    """
+    # Get test data
+    if hasattr(dataset, "get_test_data"):
+        test_x, test_y = dataset.get_test_data()
+    else:
+        # Use all data
+        test_x, test_y = [], []
+        for i in range(len(dataset)):
+            x, y = dataset[i]
+            test_x.append(x)
+            test_y.append(y)
+
+    # Sort data points by x value for smooth curve
+    sorted_data = [(x[0].data, y[0].data) for x, y in zip(test_x, test_y)]
+    sorted_data.sort(key=lambda point: point[0])
+
+    # Extract sorted data
+    x_values = [point[0] for point in sorted_data]
+    y_values = [point[1] for point in sorted_data]
+
+    # Generate model predictions
+    x_min = min(x_values)
+    x_max = max(x_values)
+    num_points = 100
+
+    step = (x_max - x_min) / (num_points - 1)
+    x_range = [x_min + i * step for i in range(num_points)]
+
+    predictions = []
+    for x in x_range:
+        output = model([Variable(x)])
+        predictions.append(output[0].data)
+
+    # Create plot
+    plt.figure(figsize=(10, 6))
+    plt.scatter(x_values, y_values, color='blue', label='Test data')
+    plt.plot(x_range, predictions, color='red', label='Model predictions')
+    plt.xlabel('Input')
+    plt.ylabel('Output')
+    plt.title('Model Predictions vs Test Data')
+    plt.legend()
+    plt.grid(True)
+    plt.show()
 
 
 if __name__ == "__main__":
