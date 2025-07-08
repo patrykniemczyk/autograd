@@ -1,6 +1,6 @@
 from typing import List, Tuple
 import math
-from Variable import Variable
+from variable import Variable
 
 
 class Optimizer:

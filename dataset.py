@@ -1,6 +1,6 @@
 import random
 from typing import List, Tuple, Optional
-from Variable import Variable
+from variable import Variable
 
 
 class Dataset:

@@ -7,12 +7,12 @@ the refactored code works correctly.
 
 import math
 import unittest
-from Variable import Variable
-from MLP import MLP, get_activation
-from AdamW import AdamW
-from Dataset import PolynomialDataset
-from Trainer import Trainer, mean_squared_error, mean_absolute_error, r2_score
-from Config import get_default_config, Config, ModelConfig
+from variable import Variable
+from mlp import MLP, get_activation
+from adam_w import AdamW
+from dataset import PolynomialDataset
+from trainer import Trainer, mean_squared_error, mean_absolute_error, r2_score
+from config import get_default_config, Config, ModelConfig
 
 
 class TestVariable(unittest.TestCase):

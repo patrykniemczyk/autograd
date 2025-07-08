@@ -10,10 +10,10 @@ import pickle
 from typing import Dict, Any, Optional
 from pathlib import Path
 
-from Variable import Variable
-from MLP import MLP
-from AdamW import AdamW
-from Config import Config
+from variable import Variable
+from mlp import MLP
+from adam_w import AdamW
+from config import Config
 
 
 def save_model(

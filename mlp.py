@@ -1,7 +1,7 @@
 import math
 import random
 from typing import List, Optional, Union, Literal
-from Variable import Variable
+from variable import Variable
 
 
 class Neuron:

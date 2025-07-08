@@ -4,10 +4,10 @@ import time
 from typing import List, Dict, Optional
 import matplotlib.pyplot as plt
 
-from Variable import Variable
-from MLP import MLP
-from AdamW import AdamW
-from Dataset import PolynomialDataset
+from variable import Variable
+from mlp import MLP
+from adam_w import AdamW
+from dataset import PolynomialDataset
 
 
 # Set up logging
@@ -456,12 +456,12 @@ def main():
     try:
         # Load configuration from file if provided
         if args.config_file:
-            from Config import Config
+            from config import Config
             config = Config.load(args.config_file)
             logger.info(f"Loaded configuration from {args.config_file}")
         else:
             # Create configuration from command line arguments
-            from Config import Config, ModelConfig, OptimizerConfig, TrainingConfig, DatasetConfig
+            from config import Config, ModelConfig, OptimizerConfig, TrainingConfig, DatasetConfig
             config = Config(
                 model=ModelConfig(
                     input_size=args.input_size,
@@ -512,7 +512,7 @@ def main():
 
         # Load or create model
         if args.load_model:
-            from ModelUtils import load_model, create_optimizer_from_model
+            from model_utils import load_model, create_optimizer_from_model
             model, optimizer_state, saved_config, metadata = load_model(args.load_model)
             optimizer = create_optimizer_from_model(model, optimizer_state)
             logger.info(f"Loaded model from {args.load_model}")
@@ -554,7 +554,7 @@ def main():
 
             # Save model if requested
             if args.save_model:
-                from ModelUtils import save_model
+                from model_utils import save_model
                 metadata = {
                     'final_metrics': final_metrics if metrics else {},
                     'training_history': metrics,
