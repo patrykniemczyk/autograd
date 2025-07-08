@@ -1,3 +1,9 @@
+"""
+Automatic differentiation implementation using computational graphs.
+
+This module provides the core Variable class that enables automatic differentiation
+through operator overloading and computational graph construction.
+"""
 import math
 import warnings
 from typing import Callable, List, Tuple, Union, Optional, Set
@@ -46,10 +52,12 @@ class Variable:
             ValueError: If data is NaN or infinite
         """
         if not isinstance(data, (int, float)):
-            raise TypeError(f"Variable data must be a number, got {type(data)}")
+            raise TypeError(
+                f"Variable data must be a number, got {type(data)}")
 
         if math.isnan(data) or math.isinf(data):
-            raise ValueError(f"Variable data cannot be NaN or infinite, got {data}")
+            raise ValueError(
+                f"Variable data cannot be NaN or infinite, got {data}")
 
         self.data: float = float(data)
         self.grad: float = 0.0
@@ -128,7 +136,8 @@ class Variable:
         other_val = other.data if isinstance(other, Variable) else other
         out = Variable(
             self.data + other_val,
-            _prev=(self,) if not isinstance(other, Variable) else (self, other),
+            _prev=(self,) if not isinstance(
+                other, Variable) else (self, other),
         )
 
         def _backward() -> None:
@@ -158,12 +167,14 @@ class Variable:
         """
         if isinstance(other, (int, float)):
             if math.isnan(other) or math.isinf(other):
-                raise ValueError(f"Cannot multiply by NaN or infinite value: {other}")
+                raise ValueError(
+                    f"Cannot multiply by NaN or infinite value: {other}")
 
         other_val = other.data if isinstance(other, Variable) else other
         out = Variable(
             self.data * other_val,
-            _prev=(self,) if not isinstance(other, Variable) else (self, other),
+            _prev=(self,) if not isinstance(
+                other, Variable) else (self, other),
         )
 
         def _backward() -> None:
@@ -197,7 +208,8 @@ class Variable:
         """
         if isinstance(other, (int, float)):
             if math.isnan(other) or math.isinf(other):
-                raise ValueError(f"Cannot raise to NaN or infinite power: {other}")
+                raise ValueError(
+                    f"Cannot raise to NaN or infinite power: {other}")
 
         other_val = other.data if isinstance(other, Variable) else other
 
@@ -213,17 +225,20 @@ class Variable:
 
         out = Variable(
             result_data,
-            _prev=(self,) if not isinstance(other, Variable) else (self, other),
+            _prev=(self,) if not isinstance(
+                other, Variable) else (self, other),
         )
 
         def _backward() -> None:
             if isinstance(other, Variable):
                 # d/dx(x^y) = y * x^(y-1)
                 if self.data != 0:  # Avoid division by zero
-                    self.grad += out.grad * other.data * self.data ** (other.data - 1)
+                    self.grad += out.grad * other.data * \
+                        self.data ** (other.data - 1)
                 # d/dy(x^y) = x^y * ln(x)
                 if self.data > 0:  # Avoid log of negative/zero
-                    other.grad += out.grad * self.data**other.data * math.log(self.data)
+                    other.grad += out.grad * \
+                        self.data**other.data * math.log(self.data)
                 elif self.data < 0:
                     warnings.warn(
                         "Taking logarithm of negative base in gradient computation"

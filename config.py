@@ -22,9 +22,11 @@ class ModelConfig:
     def __post_init__(self):
         """Validate configuration after initialization."""
         if self.input_size <= 0:
-            raise ValueError(f"input_size must be positive, got {self.input_size}")
+            raise ValueError(
+                f"input_size must be positive, got {self.input_size}")
         if self.output_size <= 0:
-            raise ValueError(f"output_size must be positive, got {self.output_size}")
+            raise ValueError(
+                f"output_size must be positive, got {self.output_size}")
         if any(size <= 0 for size in self.hidden_sizes):
             raise ValueError(
                 f"All hidden sizes must be positive, got {self.hidden_sizes}"
@@ -74,7 +76,8 @@ class TrainingConfig:
         if self.epochs <= 0:
             raise ValueError(f"epochs must be positive, got {self.epochs}")
         if self.batch_size <= 0:
-            raise ValueError(f"batch_size must be positive, got {self.batch_size}")
+            raise ValueError(
+                f"batch_size must be positive, got {self.batch_size}")
         if self.validate_every <= 0:
             raise ValueError(
                 f"validate_every must be positive, got {self.validate_every}"
@@ -111,9 +114,11 @@ class DatasetConfig:
                 f"domain must be (min, max) with min < max, got {self.domain}"
             )
         if self.num_samples <= 0:
-            raise ValueError(f"num_samples must be positive, got {self.num_samples}")
+            raise ValueError(
+                f"num_samples must be positive, got {self.num_samples}")
         if self.noise_std < 0:
-            raise ValueError(f"noise_std must be non-negative, got {self.noise_std}")
+            raise ValueError(
+                f"noise_std must be non-negative, got {self.noise_std}")
         if not 0 <= self.test_ratio <= 1:
             raise ValueError(
                 f"test_ratio must be between 0 and 1, got {self.test_ratio}"
@@ -168,7 +173,7 @@ class Config:
         Args:
             filepath: Path to save configuration
         """
-        with open(filepath, "w") as f:
+        with open(filepath, "w", encoding="utf-8") as f:
             json.dump(self.to_dict(), f, indent=2)
 
     @classmethod
@@ -182,7 +187,7 @@ class Config:
         Returns:
             Config instance
         """
-        with open(filepath, "r") as f:
+        with open(filepath, "r", encoding="utf-8") as f:
             config_dict = json.load(f)
         return cls.from_dict(config_dict)
 
@@ -203,6 +208,7 @@ def get_default_config() -> Config:
             epochs=100, batch_size=64, validate_every=10, early_stopping_patience=10
         ),
         dataset=DatasetConfig(
-            coefficients=[1, 0, -1], num_samples=10000, noise_std=0.1  # x^2 - 1
+            # x^2 - 1
+            coefficients=[1, 0, -1], num_samples=10000, noise_std=0.1
         ),
     )

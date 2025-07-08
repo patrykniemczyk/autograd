@@ -1,3 +1,9 @@
+"""
+Dataset utilities for neural network training.
+
+This module provides dataset classes for generating and managing training data,
+specifically for polynomial regression and other mathematical functions.
+"""
 import random
 from typing import List, Tuple, Optional
 from variable import Variable
@@ -71,13 +77,17 @@ class PolynomialDataset(Dataset):
         if not coefficients:
             raise ValueError("coefficients cannot be empty")
         if len(domain) != 2 or domain[1] <= domain[0]:
-            raise ValueError(f"domain must be (min, max) with min < max, got {domain}")
+            raise ValueError(
+                f"domain must be (min, max) with min < max, got {domain}")
         if num_samples <= 0:
-            raise ValueError(f"num_samples must be positive, got {num_samples}")
+            raise ValueError(
+                f"num_samples must be positive, got {num_samples}")
         if noise_std < 0:
-            raise ValueError(f"noise_std must be non-negative, got {noise_std}")
+            raise ValueError(
+                f"noise_std must be non-negative, got {noise_std}")
         if not 0 <= test_ratio <= 1:
-            raise ValueError(f"test_ratio must be between 0 and 1, got {test_ratio}")
+            raise ValueError(
+                f"test_ratio must be between 0 and 1, got {test_ratio}")
 
         if seed is not None:
             random.seed(seed)
@@ -98,7 +108,8 @@ class PolynomialDataset(Dataset):
 
             # Normalize if requested
             if normalize_inputs:
-                x_normalized = 2 * (x_val - domain[0]) / (domain[1] - domain[0]) - 1
+                x_normalized = 2 * \
+                    (x_val - domain[0]) / (domain[1] - domain[0]) - 1
                 x = [Variable(x_normalized)]
             else:
                 x = [Variable(x_val)]

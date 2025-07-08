@@ -1,3 +1,9 @@
+"""
+Training utilities for neural networks with automatic differentiation.
+
+This module provides comprehensive training functionality including metrics,
+loss functions, training loops, and command-line interface for model training.
+"""
 import argparse
 import logging
 import time
@@ -8,6 +14,8 @@ from variable import Variable
 from mlp import MLP
 from adam_w import AdamW
 from dataset import PolynomialDataset
+from config import Config, ModelConfig, OptimizerConfig, TrainingConfig, DatasetConfig
+import model_utils
 
 
 # Set up logging
@@ -150,11 +158,13 @@ class Trainer:
             ValueError: If hyperparameters are invalid
         """
         if learning_rate <= 0:
-            raise ValueError(f"learning_rate must be positive, got {learning_rate}")
+            raise ValueError(
+                f"learning_rate must be positive, got {learning_rate}")
         if batch_size <= 0:
             raise ValueError(f"batch_size must be positive, got {batch_size}")
         if weight_decay < 0:
-            raise ValueError(f"weight_decay must be non-negative, got {weight_decay}")
+            raise ValueError(
+                f"weight_decay must be non-negative, got {weight_decay}")
 
         self.model = model
         self.batch_size = batch_size
@@ -167,10 +177,10 @@ class Trainer:
         )
 
         logger.info(
-            f"Initialized trainer with lr={learning_rate}, "
-            f"batch_size={batch_size}, weight_decay={weight_decay}"
+            "Initialized trainer with lr=%s, batch_size=%s, weight_decay=%s",
+            learning_rate, batch_size, weight_decay
         )
-        logger.info(f"Model: {model}")
+        logger.info("Model: %s", model)
 
     def train_epoch(
         self, dataset, verbose: bool = False, loss_fn: str = "mse"
@@ -229,11 +239,12 @@ class Trainer:
 
                 if verbose and batch_idx % 10 == 0:
                     logger.info(
-                        f"  Batch {batch_idx}/{num_batches}, loss: {batch_loss.data:.6f}"
+                        "  Batch %s/%s, loss: %.6f",
+                        batch_idx, num_batches, batch_loss.data
                     )
 
             except Exception as e:
-                logger.error(f"Error in batch {batch_idx}: {e}")
+                logger.error("Error in batch %s: %s", batch_idx, e)
                 raise
 
         # Return average loss
@@ -259,7 +270,8 @@ class Trainer:
         valid_metrics = ["mse", "mae", "r2"]
         for metric in metrics:
             if metric not in valid_metrics:
-                raise ValueError(f"Invalid metric: {metric}. Valid: {valid_metrics}")
+                raise ValueError(
+                    f"Invalid metric: {metric}. Valid: {valid_metrics}")
 
         if hasattr(dataset, "get_test_data"):
             # Use test data if available
@@ -267,8 +279,7 @@ class Trainer:
         else:
             # Use all data
             test_x, test_y = [], []
-            for i in range(len(dataset)):
-                x, y = dataset[i]
+            for _, (x, y) in enumerate(dataset):
                 test_x.append(x)
                 test_y.append(y)
 
@@ -329,7 +340,8 @@ class Trainer:
         if epochs <= 0:
             raise ValueError(f"epochs must be positive, got {epochs}")
         if validate_every <= 0:
-            raise ValueError(f"validate_every must be positive, got {validate_every}")
+            raise ValueError(
+                f"validate_every must be positive, got {validate_every}")
         if early_stopping_patience is not None and early_stopping_patience <= 0:
             raise ValueError(
                 f"early_stopping_patience must be positive, got {early_stopping_patience}"
@@ -340,10 +352,10 @@ class Trainer:
         patience_counter = 0
         best_epoch = 0
 
-        logger.info(f"Starting training for {epochs} epochs")
+        logger.info("Starting training for %s epochs", epochs)
         if early_stopping_patience:
             logger.info(
-                f"Early stopping enabled with patience={early_stopping_patience}"
+                "Early stopping enabled with patience=%s", early_stopping_patience
             )
 
         start_time = time.time()
@@ -358,13 +370,14 @@ class Trainer:
                     )
                     epoch_metrics["train_loss"] = train_loss
                 except Exception as e:
-                    logger.error(f"Training failed at epoch {epoch}: {e}")
+                    logger.error("Training failed at epoch %s: %s", epoch, e)
                     raise
 
             # Validate
             if epoch % validate_every == 0 or epoch == epochs:
                 try:
-                    eval_metrics = self.evaluate(dataset, metrics=["mse", "mae", "r2"])
+                    eval_metrics = self.evaluate(
+                        dataset, metrics=["mse", "mae", "r2"])
                     epoch_metrics.update(eval_metrics)
 
                     # Early stopping logic
@@ -379,15 +392,16 @@ class Trainer:
                             best_epoch = epoch
                             patience_counter = 0
                             logger.info(
-                                f"New best validation loss: {best_eval_loss:.6f}"
+                                "New best validation loss: %.6f", best_eval_loss
                             )
                         else:
                             patience_counter += 1
 
                         if patience_counter >= early_stopping_patience:
                             logger.info(
-                                f"Early stopping triggered at epoch {epoch}. "
-                                f"Best epoch: {best_epoch} with loss: {best_eval_loss:.6f}"
+                                "Early stopping triggered at epoch %s. "
+                                "Best epoch: %s with loss: %.6f",
+                                epoch, best_epoch, best_eval_loss
                             )
                             break
 
@@ -397,17 +411,18 @@ class Trainer:
                             [f"{k}: {v:.6f}" for k, v in epoch_metrics.items()]
                         )
                         logger.info(
-                            f"Epoch {epoch}/{epochs}, {metrics_str}, time: {elapsed:.2f}s"
+                            "Epoch %s/%s, %s, time: %.2fs",
+                            epoch, epochs, metrics_str, elapsed
                         )
 
                 except Exception as e:
-                    logger.error(f"Evaluation failed at epoch {epoch}: {e}")
+                    logger.error("Evaluation failed at epoch %s: %s", epoch, e)
                     raise
 
             metrics.append(epoch_metrics)
 
         total_time = time.time() - start_time
-        logger.info(f"Training completed in {total_time:.2f}s")
+        logger.info("Training completed in %.2fs", total_time)
         return metrics
 
 
@@ -521,7 +536,8 @@ def main():
     parser.add_argument(
         "--save-config", type=str, default=None, help="Path to save configuration"
     )
-    parser.add_argument("--verbose", action="store_true", help="Enable verbose logging")
+    parser.add_argument("--verbose", action="store_true",
+                        help="Enable verbose logging")
 
     args = parser.parse_args()
 
@@ -534,19 +550,10 @@ def main():
     try:
         # Load configuration from file if provided
         if args.config_file:
-            from config import Config
-
             config = Config.load(args.config_file)
-            logger.info(f"Loaded configuration from {args.config_file}")
+            logger.info("Loaded configuration from %s", args.config_file)
         else:
             # Create configuration from command line arguments
-            from config import (
-                Config,
-                ModelConfig,
-                OptimizerConfig,
-                TrainingConfig,
-                DatasetConfig,
-            )
 
             config = Config(
                 model=ModelConfig(
@@ -581,7 +588,7 @@ def main():
         # Save configuration if requested
         if args.save_config:
             config.save(args.save_config)
-            logger.info(f"Saved configuration to {args.save_config}")
+            logger.info("Saved configuration to %s", args.save_config)
 
         # Create dataset
         dataset = PolynomialDataset(
@@ -594,17 +601,16 @@ def main():
             seed=config.dataset.seed,
         )
 
-        logger.info(f"Created dataset: {dataset}")
+        logger.info("Created dataset: %s", dataset)
 
         # Load or create model
         if args.load_model:
-            from model_utils import load_model, create_optimizer_from_model
-
-            model, optimizer_state, saved_config, metadata = load_model(args.load_model)
-            optimizer = create_optimizer_from_model(model, optimizer_state)
-            logger.info(f"Loaded model from {args.load_model}")
+            model, optimizer_state, _, metadata = model_utils.load_model(
+                args.load_model)
+            _ = model_utils.create_optimizer_from_model(model, optimizer_state)
+            logger.info("Loaded model from %s", args.load_model)
             if metadata:
-                logger.info(f"Model metadata: {metadata}")
+                logger.info("Model metadata: %s", metadata)
         else:
             # Create model
             model = MLP(
@@ -613,7 +619,7 @@ def main():
                 output_size=config.model.output_size,
                 activation=config.model.activation,
             )
-            logger.info(f"Created model: {model}")
+            logger.info("Created model: %s", model)
 
             # Create trainer
             trainer = Trainer(
@@ -637,19 +643,19 @@ def main():
             # Display final results
             if metrics:
                 final_metrics = metrics[-1]
-                logger.info(f"Training completed. Final metrics: {final_metrics}")
+                logger.info(
+                    "Training completed. Final metrics: %s", final_metrics)
 
             # Save model if requested
             if args.save_model:
-                from model_utils import save_model
-
                 metadata = {
                     "final_metrics": final_metrics if metrics else {},
                     "training_history": metrics,
                     "dataset_info": str(dataset),
                 }
-                save_model(model, args.save_model, trainer.optimizer, config, metadata)
-                logger.info(f"Model saved to {args.save_model}")
+                model_utils.save_model(
+                    model, args.save_model, trainer.optimizer, config, metadata)
+                logger.info("Model saved to %s", args.save_model)
 
         # Visualization (if not loading model)
         if not args.load_model:
@@ -657,10 +663,10 @@ def main():
                 visualize_predictions(model, dataset)
                 logger.info("Generated prediction visualization")
             except Exception as e:
-                logger.warning(f"Could not generate visualization: {e}")
+                logger.warning("Could not generate visualization: %s", e)
 
     except Exception as e:
-        logger.error(f"Training failed: {e}")
+        logger.error("Training failed: %s", e)
 
 
 def visualize_predictions(model, dataset):
@@ -677,8 +683,7 @@ def visualize_predictions(model, dataset):
     else:
         # Use all data
         test_x, test_y = [], []
-        for i in range(len(dataset)):
-            x, y = dataset[i]
+        for i, (x, y) in enumerate(dataset):
             test_x.append(x)
             test_y.append(y)
 
@@ -710,7 +715,8 @@ def visualize_predictions(model, dataset):
     # Create plot
     plt.figure(figsize=(10, 6))
     plt.scatter(x_values, y_values, color="blue", alpha=0.6, label="Test data")
-    plt.plot(x_range, predictions, color="red", linewidth=2, label="Model predictions")
+    plt.plot(x_range, predictions, color="red",
+             linewidth=2, label="Model predictions")
     plt.xlabel("Input")
     plt.ylabel("Output")
     plt.title("Model Predictions vs Test Data")

@@ -11,7 +11,7 @@ from mlp import MLP, get_activation
 from adam_w import AdamW
 from dataset import PolynomialDataset
 from trainer import Trainer, mean_squared_error, mean_absolute_error, r2_score
-from config import get_default_config, Config, ModelConfig
+from config import get_default_config, ModelConfig
 
 
 class TestVariable(unittest.TestCase):
@@ -72,7 +72,7 @@ class TestVariable(unittest.TestCase):
         x = Variable(1.0)
         y = Variable(0.0)
         with self.assertRaises(ValueError):
-            z = x / y
+            _ = x / y
 
     def test_gradient_clipping(self):
         """Test gradient clipping."""

@@ -1,3 +1,9 @@
+"""
+AdamW optimizer implementation for neural network training.
+
+This module provides the AdamW optimizer, which is an adaptive learning rate
+optimization algorithm that is particularly effective for training deep neural networks.
+"""
 from typing import List, Tuple
 import math
 from variable import Variable
@@ -124,7 +130,8 @@ class AdamW(Optimizer):
             self.m[i] = self.beta1 * self.m[i] + (1 - self.beta1) * param.grad
 
             # Update biased second raw moment estimate
-            self.v[i] = self.beta2 * self.v[i] + (1 - self.beta2) * (param.grad**2)
+            self.v[i] = self.beta2 * self.v[i] + \
+                (1 - self.beta2) * (param.grad**2)
 
             # Compute bias-corrected first moment estimate
             m_hat = self.m[i] / (1 - self.beta1**self.step_count)

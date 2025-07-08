@@ -1,6 +1,12 @@
+"""
+Multi-layer perceptron implementation with automatic differentiation.
+
+This module provides classes for building and training neural networks,
+including individual neurons, layers, and complete MLP networks.
+"""
 import math
 import random
-from typing import List, Optional, Union, Literal
+from typing import List, Union, Literal
 from variable import Variable
 
 
@@ -37,7 +43,8 @@ class Neuron:
 
         # He initialization for ReLU networks
         std = math.sqrt(initialization_gain / input_size)
-        self.weights = [Variable(random.gauss(0, std)) for _ in range(input_size)]
+        self.weights = [Variable(random.gauss(0, std))
+                        for _ in range(input_size)]
         self.bias = Variable(0.0)
         self.input_size = input_size
 
@@ -55,7 +62,8 @@ class Neuron:
             ValueError: If number of inputs doesn't match expected size
         """
         if len(inputs) != self.input_size:
-            raise ValueError(f"Expected {self.input_size} inputs, got {len(inputs)}")
+            raise ValueError(
+                f"Expected {self.input_size} inputs, got {len(inputs)}")
 
         # Weighted sum + bias
         return sum(w * x for w, x in zip(self.weights, inputs)) + self.bias
@@ -96,7 +104,8 @@ class Linear:
         if input_size <= 0:
             raise ValueError(f"input_size must be positive, got {input_size}")
         if output_size <= 0:
-            raise ValueError(f"output_size must be positive, got {output_size}")
+            raise ValueError(
+                f"output_size must be positive, got {output_size}")
 
         self.neurons = [
             Neuron(input_size, initialization_gain) for _ in range(output_size)
@@ -118,7 +127,8 @@ class Linear:
             ValueError: If number of inputs doesn't match expected size
         """
         if len(inputs) != self.input_size:
-            raise ValueError(f"Expected {self.input_size} inputs, got {len(inputs)}")
+            raise ValueError(
+                f"Expected {self.input_size} inputs, got {len(inputs)}")
 
         return [neuron(inputs) for neuron in self.neurons]
 
@@ -245,9 +255,11 @@ class MLP:
         if input_size <= 0:
             raise ValueError(f"input_size must be positive, got {input_size}")
         if output_size <= 0:
-            raise ValueError(f"output_size must be positive, got {output_size}")
+            raise ValueError(
+                f"output_size must be positive, got {output_size}")
         if any(size <= 0 for size in hidden_sizes):
-            raise ValueError(f"All hidden sizes must be positive, got {hidden_sizes}")
+            raise ValueError(
+                f"All hidden sizes must be positive, got {hidden_sizes}")
 
         self.input_size = input_size
         self.hidden_sizes = hidden_sizes.copy()
@@ -278,7 +290,8 @@ class MLP:
             ValueError: If number of inputs doesn't match expected size
         """
         if len(inputs) != self.input_size:
-            raise ValueError(f"Expected {self.input_size} inputs, got {len(inputs)}")
+            raise ValueError(
+                f"Expected {self.input_size} inputs, got {len(inputs)}")
 
         x = inputs
         for layer in self.layers:
@@ -298,6 +311,7 @@ class MLP:
 
     def __repr__(self) -> str:
         """String representation of the MLP."""
-        layer_sizes = [self.input_size] + self.hidden_sizes + [self.output_size]
+        layer_sizes = [self.input_size] + \
+            self.hidden_sizes + [self.output_size]
         arch_str = " -> ".join(map(str, layer_sizes))
         return f"MLP({arch_str}, activation={self.activation_name}, params={self.num_parameters()})"

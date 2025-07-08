@@ -9,7 +9,6 @@ import pickle
 from typing import Dict, Any, Optional
 from pathlib import Path
 
-from variable import Variable
 from mlp import MLP
 from adam_w import AdamW
 from config import Config
@@ -136,18 +135,18 @@ def export_model_info(model: MLP, filepath: str) -> None:
         model: The MLP model
         filepath: Path to save the info file
     """
-    with open(filepath, "w") as f:
-        f.write(f"Model Architecture\n")
-        f.write(f"==================\n")
-        f.write(f"Type: Multi-Layer Perceptron\n")
+    with open(filepath, "w", encoding="utf-8") as f:
+        f.write("Model Architecture\n")
+        f.write("==================\n")
+        f.write("Type: Multi-Layer Perceptron\n")
         f.write(f"Input size: {model.input_size}\n")
         f.write(f"Hidden layers: {model.hidden_sizes}\n")
         f.write(f"Output size: {model.output_size}\n")
         f.write(f"Activation: {model.activation_name}\n")
         f.write(f"Total parameters: {model.num_parameters()}\n\n")
 
-        f.write(f"Layer Details\n")
-        f.write(f"=============\n")
+        f.write("Layer Details\n")
+        f.write("=============\n")
         layer_idx = 0
         param_idx = 0
 
@@ -174,9 +173,9 @@ def export_model_info(model: MLP, filepath: str) -> None:
             # Add activation info if not the last layer
             if i < len(layer_sizes) - 2:
                 f.write(f"\n{model.activation_name.upper()} Activation\n")
-                f.write(f"  Parameters: 0\n")
+                f.write("  Parameters: 0\n")
 
-            f.write(f"\n")
+            f.write("\n")
 
 
 # Example usage functions
