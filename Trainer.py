@@ -289,21 +289,44 @@ class Trainer:
         dataset,
         epochs: int = 100,
         validate_every: int = 10,
-        verbose: bool = True
+        verbose: bool = True,
+        early_stopping_patience: Optional[int] = None,
+        early_stopping_min_delta: float = 1e-6,
+        loss_fn: str = 'mse'
     ) -> List[Dict[str, float]]:
         """
-        Train the model.
+        Train the model with optional early stopping.
 
         Args:
             dataset: Dataset to train on
             epochs: Number of epochs to train
             validate_every: Validate every N epochs
-            verbose: Whether to print progress
+            verbose: Whether to log progress
+            early_stopping_patience: Stop if no improvement for N validations (None to disable)
+            early_stopping_min_delta: Minimum change to qualify as improvement
+            loss_fn: Loss function to use ('mse' or 'mae')
 
         Returns:
             List of training metrics per epoch
+            
+        Raises:
+            ValueError: If parameters are invalid
         """
+        if epochs <= 0:
+            raise ValueError(f"epochs must be positive, got {epochs}")
+        if validate_every <= 0:
+            raise ValueError(f"validate_every must be positive, got {validate_every}")
+        if early_stopping_patience is not None and early_stopping_patience <= 0:
+            raise ValueError(f"early_stopping_patience must be positive, got {early_stopping_patience}")
+        
         metrics = []
+        best_eval_loss = float('inf')
+        patience_counter = 0
+        best_epoch = 0
+
+        logger.info(f"Starting training for {epochs} epochs")
+        if early_stopping_patience:
+            logger.info(f"Early stopping enabled with patience={early_stopping_patience}")
 
         start_time = time.time()
         for epoch in range(epochs + 1):
@@ -311,90 +334,245 @@ class Trainer:
 
             # Train one epoch (skip for epoch 0)
             if epoch > 0:
-                train_loss = self.train_epoch(dataset, verbose=False)
-                epoch_metrics["train_loss"] = train_loss
+                try:
+                    train_loss = self.train_epoch(dataset, verbose=verbose, loss_fn=loss_fn)
+                    epoch_metrics["train_loss"] = train_loss
+                except Exception as e:
+                    logger.error(f"Training failed at epoch {epoch}: {e}")
+                    raise
 
             # Validate
             if epoch % validate_every == 0 or epoch == epochs:
-                eval_loss = self.evaluate(dataset)
-                epoch_metrics["eval_loss"] = eval_loss
+                try:
+                    eval_metrics = self.evaluate(dataset, metrics=['mse', 'mae', 'r2'])
+                    epoch_metrics.update(eval_metrics)
+                    
+                    # Early stopping logic
+                    current_eval_loss = eval_metrics['mse']  # Use MSE for early stopping
+                    if early_stopping_patience:
+                        if current_eval_loss < best_eval_loss - early_stopping_min_delta:
+                            best_eval_loss = current_eval_loss
+                            best_epoch = epoch
+                            patience_counter = 0
+                            logger.info(f"New best validation loss: {best_eval_loss:.6f}")
+                        else:
+                            patience_counter += 1
+                            
+                        if patience_counter >= early_stopping_patience:
+                            logger.info(f"Early stopping triggered at epoch {epoch}. "
+                                      f"Best epoch: {best_epoch} with loss: {best_eval_loss:.6f}")
+                            break
 
-                if verbose:
-                    elapsed = time.time() - start_time
-                    metrics_str = ", ".join(
-                        [f"{k}: {v:.6f}" for k, v in epoch_metrics.items()])
-                    print(
-                        f"Epoch {epoch}/{epochs}, {metrics_str}, time: {elapsed:.2f}s")
+                    if verbose:
+                        elapsed = time.time() - start_time
+                        metrics_str = ", ".join(
+                            [f"{k}: {v:.6f}" for k, v in epoch_metrics.items()])
+                        logger.info(f"Epoch {epoch}/{epochs}, {metrics_str}, time: {elapsed:.2f}s")
+                        
+                except Exception as e:
+                    logger.error(f"Evaluation failed at epoch {epoch}: {e}")
+                    raise
 
             metrics.append(epoch_metrics)
 
+        total_time = time.time() - start_time
+        logger.info(f"Training completed in {total_time:.2f}s")
         return metrics
 
 
 def main():
-    """Main function to run training."""
-    parser = argparse.ArgumentParser(description="Train an MLP model")
+    """Main function to run training with enhanced configuration support."""
+    parser = argparse.ArgumentParser(description="Train an MLP model for polynomial regression")
+    
+    # Model configuration
+    parser.add_argument("--input-size", type=int, default=1,
+                        help="Number of input features")
     parser.add_argument("--hidden-sizes", type=int, nargs="+", default=[16, 16],
                         help="Sizes of hidden layers")
+    parser.add_argument("--output-size", type=int, default=1,
+                        help="Number of output features")
+    parser.add_argument("--activation", type=str, default="relu", 
+                        choices=['relu', 'tanh', 'sigmoid'],
+                        help="Activation function")
+    
+    # Training configuration
     parser.add_argument("--epochs", type=int, default=100,
                         help="Number of training epochs")
     parser.add_argument("--batch-size", type=int, default=64,
                         help="Batch size for training")
+    parser.add_argument("--validate-every", type=int, default=10,
+                        help="Validate every N epochs")
+    parser.add_argument("--early-stopping-patience", type=int, default=None,
+                        help="Early stopping patience (None to disable)")
+    parser.add_argument("--loss-fn", type=str, default="mse", choices=['mse', 'mae'],
+                        help="Loss function to use")
+    
+    # Optimizer configuration
     parser.add_argument("--lr", type=float, default=0.01,
                         help="Learning rate")
     parser.add_argument("--weight-decay", type=float, default=0.01,
                         help="Weight decay factor")
-    parser.add_argument("--noise", type=float, default=0.01,
-                        help="Noise level for dataset")
-    parser.add_argument("--polynomial-coeffs", type=float, nargs="+", default=[10, -3, -2, 1],
+    parser.add_argument("--beta1", type=float, default=0.9,
+                        help="Beta1 for AdamW optimizer")
+    parser.add_argument("--beta2", type=float, default=0.999,
+                        help="Beta2 for AdamW optimizer")
+    
+    # Dataset configuration
+    parser.add_argument("--polynomial-coeffs", type=float, nargs="+", default=[1, 0, -1],
                         help="Coefficients of the polynomial, from highest to lowest power")
+    parser.add_argument("--domain", type=float, nargs=2, default=[-1.0, 1.0],
+                        help="Domain for input values (min max)")
+    parser.add_argument("--num-samples", type=int, default=10000,
+                        help="Number of samples to generate")
+    parser.add_argument("--noise", type=float, default=0.1,
+                        help="Noise level for dataset")
+    parser.add_argument("--test-ratio", type=float, default=0.2,
+                        help="Fraction of data for testing")
+    parser.add_argument("--normalize-inputs", action="store_true",
+                        help="Normalize input values to [-1, 1]")
+    parser.add_argument("--seed", type=int, default=None,
+                        help="Random seed for reproducible results")
+    
+    # Output configuration
+    parser.add_argument("--save-model", type=str, default=None,
+                        help="Path to save trained model")
+    parser.add_argument("--load-model", type=str, default=None,
+                        help="Path to load pretrained model")
+    parser.add_argument("--config-file", type=str, default=None,
+                        help="Path to configuration file")
+    parser.add_argument("--save-config", type=str, default=None,
+                        help="Path to save configuration")
+    parser.add_argument("--verbose", action="store_true",
+                        help="Enable verbose logging")
 
     args = parser.parse_args()
+    
+    # Set logging level
+    if args.verbose:
+        logging.getLogger().setLevel(logging.INFO)
+    else:
+        logging.getLogger().setLevel(logging.WARNING)
 
-    # Create dataset
-    dataset = PolynomialDataset(args.polynomial_coeffs, noise_std=args.noise)
-    # Format the polynomial as a string for display
-    poly_terms = []
-    for i, coeff in enumerate(args.polynomial_coeffs):
-        power = len(args.polynomial_coeffs) - i - 1
-        if coeff == 0:
-            continue
-        if power == 0:
-            term = f"{coeff}"
-        elif power == 1:
-            term = f"{coeff}x"
+    try:
+        # Load configuration from file if provided
+        if args.config_file:
+            from Config import Config
+            config = Config.load(args.config_file)
+            logger.info(f"Loaded configuration from {args.config_file}")
         else:
-            term = f"{coeff}x^{power}"
-        poly_terms.append(term)
-    poly_str = " + ".join(poly_terms).replace(" + -", " - ")
+            # Create configuration from command line arguments
+            from Config import Config, ModelConfig, OptimizerConfig, TrainingConfig, DatasetConfig
+            config = Config(
+                model=ModelConfig(
+                    input_size=args.input_size,
+                    hidden_sizes=args.hidden_sizes,
+                    output_size=args.output_size,
+                    activation=args.activation
+                ),
+                optimizer=OptimizerConfig(
+                    learning_rate=args.lr,
+                    betas=(args.beta1, args.beta2),
+                    weight_decay=args.weight_decay
+                ),
+                training=TrainingConfig(
+                    epochs=args.epochs,
+                    batch_size=args.batch_size,
+                    validate_every=args.validate_every,
+                    early_stopping_patience=args.early_stopping_patience,
+                    loss_fn=args.loss_fn
+                ),
+                dataset=DatasetConfig(
+                    coefficients=args.polynomial_coeffs,
+                    domain=tuple(args.domain),
+                    num_samples=args.num_samples,
+                    noise_std=args.noise,
+                    test_ratio=args.test_ratio,
+                    normalize_inputs=args.normalize_inputs,
+                    seed=args.seed
+                )
+            )
 
-    print(f"Created polynomial dataset: {poly_str}")
+        # Save configuration if requested
+        if args.save_config:
+            config.save(args.save_config)
+            logger.info(f"Saved configuration to {args.save_config}")
 
-    # Create model (1 input feature, specified hidden layers, 1 output)
-    model = MLP(1, args.hidden_sizes, 1)
-    print(
-        f"Created MLP with architecture: 1 -> {' -> '.join(map(str, args.hidden_sizes))} -> 1")
+        # Create dataset
+        dataset = PolynomialDataset(
+            coefficients=config.dataset.coefficients,
+            domain=config.dataset.domain,
+            num_samples=config.dataset.num_samples,
+            noise_std=config.dataset.noise_std,
+            test_ratio=config.dataset.test_ratio,
+            normalize_inputs=config.dataset.normalize_inputs,
+            seed=config.dataset.seed
+        )
+        
+        logger.info(f"Created dataset: {dataset}")
 
-    # Create trainer
-    trainer = Trainer(
-        model=model,
-        learning_rate=args.lr,
-        batch_size=args.batch_size,
-        weight_decay=args.weight_decay
-    )
+        # Load or create model
+        if args.load_model:
+            from ModelUtils import load_model, create_optimizer_from_model
+            model, optimizer_state, saved_config, metadata = load_model(args.load_model)
+            optimizer = create_optimizer_from_model(model, optimizer_state)
+            logger.info(f"Loaded model from {args.load_model}")
+            if metadata:
+                logger.info(f"Model metadata: {metadata}")
+        else:
+            # Create model
+            model = MLP(
+                input_size=config.model.input_size,
+                hidden_sizes=config.model.hidden_sizes,
+                output_size=config.model.output_size,
+                activation=config.model.activation
+            )
+            logger.info(f"Created model: {model}")
 
-    # Train model
-    print(
-        f"Training for {args.epochs} epochs with lr={args.lr}, batch_size={args.batch_size}")
-    metrics = trainer.train(dataset, epochs=args.epochs)
+            # Create trainer
+            trainer = Trainer(
+                model,
+                learning_rate=config.optimizer.learning_rate,
+                batch_size=config.training.batch_size,
+                weight_decay=config.optimizer.weight_decay
+            )
 
-    # Final evaluation
-    final_loss = trainer.evaluate(dataset)
-    print(f"Final evaluation loss: {final_loss:.6f}")
+            # Train model
+            logger.info("Starting training...")
+            metrics = trainer.train(
+                dataset,
+                epochs=config.training.epochs,
+                validate_every=config.training.validate_every,
+                verbose=args.verbose,
+                early_stopping_patience=config.training.early_stopping_patience,
+                loss_fn=config.training.loss_fn
+            )
 
-    # Visualize results
-    visualize_predictions(model, dataset)
+            # Display final results
+            if metrics:
+                final_metrics = metrics[-1]
+                logger.info(f"Training completed. Final metrics: {final_metrics}")
 
+            # Save model if requested
+            if args.save_model:
+                from ModelUtils import save_model
+                metadata = {
+                    'final_metrics': final_metrics if metrics else {},
+                    'training_history': metrics,
+                    'dataset_info': str(dataset)
+                }
+                save_model(model, args.save_model, trainer.optimizer, config, metadata)
+                logger.info(f"Model saved to {args.save_model}")
+
+        # Visualization (if not loading model)
+        if not args.load_model:
+            try:
+                visualize_predictions(model, dataset)
+                logger.info("Generated prediction visualization")
+            except Exception as e:
+                logger.warning(f"Could not generate visualization: {e}")
+
+    except Exception as e:
+        logger.error(f"Training failed: {e}")
 
 def visualize_predictions(model, dataset):
     """
@@ -415,6 +593,10 @@ def visualize_predictions(model, dataset):
             test_x.append(x)
             test_y.append(y)
 
+    if not test_x:
+        logger.warning("No test data available for visualization")
+        return
+
     # Sort data points by x value for smooth curve
     sorted_data = [(x[0].data, y[0].data) for x, y in zip(test_x, test_y)]
     sorted_data.sort(key=lambda point: point[0])
@@ -428,7 +610,7 @@ def visualize_predictions(model, dataset):
     x_max = max(x_values)
     num_points = 100
 
-    step = (x_max - x_min) / (num_points - 1)
+    step = (x_max - x_min) / (num_points - 1) if num_points > 1 else 0
     x_range = [x_min + i * step for i in range(num_points)]
 
     predictions = []
@@ -438,13 +620,14 @@ def visualize_predictions(model, dataset):
 
     # Create plot
     plt.figure(figsize=(10, 6))
-    plt.scatter(x_values, y_values, color='blue', label='Test data')
-    plt.plot(x_range, predictions, color='red', label='Model predictions')
+    plt.scatter(x_values, y_values, color='blue', alpha=0.6, label='Test data')
+    plt.plot(x_range, predictions, color='red', linewidth=2, label='Model predictions')
     plt.xlabel('Input')
     plt.ylabel('Output')
     plt.title('Model Predictions vs Test Data')
     plt.legend()
-    plt.grid(True)
+    plt.grid(True, alpha=0.3)
+    plt.tight_layout()
     plt.show()
 
 
